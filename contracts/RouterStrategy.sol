@@ -3,18 +3,9 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
-import {
-    SafeERC20,
-    SafeMath,
-    IERC20,
-    Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {BaseStrategy} from "./ModifiedBaseStrategy.sol";
+import {SafeERC20,SafeMath,IERC20,Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-
-interface ILossChecker {
-    function check_loss(uint, uint) external view returns (uint);
-}
 
 interface ISharesHelper {
     function sharesToAmount(address, uint) external view returns (uint);
@@ -39,8 +30,7 @@ contract RouterStrategy is BaseStrategy {
 
     string internal strategyName;
     IVault public yVault;
-    ILossChecker public constant lossChecker = ILossChecker(0x6b6003d4Bc320Ed25E8E2be49600EC1006676239);
-    uint256 public feeLossTolerance;
+    
     uint256 public maxLoss;
     bool internal isOriginal = true;
     ISharesHelper public constant sharesHelper = 
@@ -169,9 +159,6 @@ contract RouterStrategy is BaseStrategy {
             _profit = _profit.sub(_loss);
             _loss = 0;
         }
-
-        uint expectedLoss = lossChecker.check_loss(_profit, _loss);
-        require(feeLossTolerance >= expectedLoss, "LossyWithFees");
     }
 
     function adjustPosition(uint256 _debtOutstanding)
@@ -247,10 +234,6 @@ contract RouterStrategy is BaseStrategy {
 
     function setMaxLoss(uint256 _maxLoss) public onlyAuthorized {
         maxLoss = _maxLoss;
-    }
-
-    function setFeeLossTolerance(uint256 _tolerance) public onlyAuthorized {
-        feeLossTolerance = _tolerance;
     }
 
     function balanceOfWant() public view returns (uint256) {
