@@ -12,7 +12,7 @@ interface IStrategy {
 contract Stash {
     using SafeERC20 for IERC20;
 
-    address owner = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
+    address constant public owner = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
 
     event StrategyApproved(address strategy);
     event StrategyRevoked(address strategy);
