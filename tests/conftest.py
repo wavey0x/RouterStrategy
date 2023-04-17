@@ -1,5 +1,5 @@
 import pytest
-from brownie import config, Contract, ZERO_ADDRESS, LossOnFeeChecker
+from brownie import config, Contract, ZERO_ADDRESS, LossOnFeeChecker, Stash, web3
 from eth_abi import encode_single
 
 
@@ -112,6 +112,21 @@ def health_check():
     yield Contract("0xddcea799ff1699e98edf118e0629a974df7df012")
 
 @pytest.fixture
+def stash(strategist, gov):
+    stash = Contract('0xE376e8e8E3B0793CD61C6F1283bA18548b726C2e',owner=gov)
+    
+    # Transfer some tokens to stash
+    amount = 100e18
+    v = Contract('0xdCD90C7f6324cfa40d7169ef80b12031770B4325',owner=gov)
+    treasury = Contract(web3.ens.resolve('treasury.ychad.eth'),owner=gov)
+    treasury.toGovernance(v.address, amount)
+    token = Contract(v.token(),owner=gov)
+    v.withdraw()
+    token.transfer(stash, amount)
+    
+    yield stash
+
+@pytest.fixture
 def vault(pm, gov, rewards, guardian, management, token):
     Vault = pm(config["dependencies"][0]).Vault
     vault = guardian.deploy(Vault)
@@ -138,6 +153,7 @@ def strategy(
     gov,
     loss_checker,
     health_check,
+    stash,
 ):
     strategy = strategist.deploy(
         RouterStrategy, origin_vault, destination_vault, "Strat "+origin_vault.symbol()
@@ -159,6 +175,9 @@ def strategy(
     strategy.setHealthCheck(health_check, {"from": origin_vault.governance()})
     origin_vault.addStrategy(strategy, 10_000, 0, 0, {"from": gov})
     # loss_checker.approve_sweeper(strategy,True,{'from':gov})
+
+    stash.approveStrategy(strategy,{'from':gov})
+
     yield strategy
 
 @pytest.fixture
