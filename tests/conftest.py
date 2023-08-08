@@ -1,5 +1,5 @@
 import pytest
-from brownie import config, Contract, ZERO_ADDRESS, LossOnFeeChecker, Stash, web3
+from brownie import config, Contract, ZERO_ADDRESS, LossOnFeeChecker, Stash, web3, accounts
 from eth_abi import encode_single
 
 
@@ -61,17 +61,32 @@ def yvsteth_030(gov):
 def yvsteth_045(gov):
     yield Contract("0x5B8C556B8b2a78696F0B9B830B3d67623122E270",owner=gov)
 
+@pytest.fixture
+def yvib_032(gov):
+    yield Contract("0x27b7b1ad7288079A66d12350c828D3C00A6F07d7",owner=gov)
 
 @pytest.fixture
-def origin_vault(yvsteth_030):
+def yvseth_032(gov):
+    yield Contract("0x986b4AFF588a109c09B50A03f42E4110E29D353F",owner=gov)
+
+@pytest.fixture
+def yvib_factory(gov):
+    yield Contract("0xa8E0c42F45C877e611C76F2D4bF57476f2014381",owner=gov)
+
+@pytest.fixture
+def yvseth_factory(gov):
+    yield Contract("0xB5dE7250128775a317B3f775a7AFcEC73571B732",owner=gov)
+
+@pytest.fixture
+def origin_vault(yvsteth_030, yvib_032, yvseth_032):
     # origin vault of the route
-    yield yvsteth_030
+    yield yvib_032
 
 
 @pytest.fixture
-def destination_vault(yvsteth_045):
+def destination_vault(yvsteth_045, yvib_factory, yvseth_factory):
     # destination vault of the route
-    yield yvsteth_045
+    yield yvib_factory
 
 
 @pytest.fixture
@@ -112,29 +127,32 @@ def health_check():
     yield Contract("0xddcea799ff1699e98edf118e0629a974df7df012")
 
 @pytest.fixture
-def stash(strategist, gov):
+def stash(strategist, gov, yvib_032, yvseth_032):
     stash = Contract('0xE376e8e8E3B0793CD61C6F1283bA18548b726C2e',owner=gov)
     
     # Transfer some tokens to stash
     amount = 100e18
-    v = Contract('0xdCD90C7f6324cfa40d7169ef80b12031770B4325',owner=gov)
+    w = accounts.at('0x7d2aB9CA511EBD6F03971Fb417d3492aA82513f0', force=True)
+    yvib_032.transfer(gov, yvib_032.balanceOf(w), {'from':w})
+    v = yvib_032
     treasury = Contract(web3.ens.resolve('treasury.ychad.eth'),owner=gov)
     treasury.toGovernance(v.address, amount)
     token = Contract(v.token(),owner=gov)
     v.withdraw()
+    amount = token.balanceOf(gov)
     token.transfer(stash, amount)
     
     yield stash
 
-@pytest.fixture
-def vault(pm, gov, rewards, guardian, management, token):
-    Vault = pm(config["dependencies"][0]).Vault
-    vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "", "", guardian, management)
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-    vault.setManagement(management, {"from": gov})
-    yield vault
-    yield Contract("0xa9fE4601811213c340e850ea305481afF02f5b28")
+# @pytest.fixture
+# def vault(pm, gov, rewards, guardian, management, token):
+#     Vault = pm(config["dependencies"][0]).Vault
+#     vault = guardian.deploy(Vault)
+#     vault.initialize(token, gov, rewards, "", "", guardian, management)
+#     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+#     vault.setManagement(management, {"from": gov})
+#     yield vault
+#     yield Contract("0xa9fE4601811213c340e850ea305481afF02f5b28")
 
 @pytest.fixture
 def loss_checker(strategist, gov):
@@ -173,7 +191,14 @@ def strategy(
         Contract(strat_address,owner=gov).harvest()
 
     strategy.setHealthCheck(health_check, {"from": origin_vault.governance()})
-    origin_vault.addStrategy(strategy, 10_000, 0, 0, {"from": gov})
+    origin_vault.addStrategy(
+        strategy, 
+        10_000, #dr
+        0, # min
+        2**256-1, # max
+        0, # perf fee
+        {"from": gov}
+    )
     # loss_checker.approve_sweeper(strategy,True,{'from':gov})
 
     stash.approveStrategy(strategy,{'from':gov})

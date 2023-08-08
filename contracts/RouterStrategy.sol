@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import {BaseStrategy} from "./ModifiedBaseStrategy.sol";
-import {SafeERC20,SafeMath,IERC20,Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {SafeERC20,IERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 interface ISharesHelper {
@@ -25,8 +25,6 @@ interface IVault is IERC20 {
 
 contract RouterStrategy is BaseStrategy {
     using SafeERC20 for IERC20;
-    using Address for address;
-    using SafeMath for uint256;
 
     string internal strategyName;
     IVault public yVault;
