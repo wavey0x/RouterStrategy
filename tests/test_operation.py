@@ -8,7 +8,7 @@ def test_migrate(origin_vault, destination_vault, strategy, gov, loss_checker, s
 
     # At this point, all funds are already removed from existing strats
     # We only have to harvest into our router strat, which is already at 100% DR
-    strategy.setFeeLossTolerance(100e18,{"from": gov})
+    strategy.setFeeLossTolerance(100_000e18,{"from": gov})
     tx = strategy.harvest({"from": gov})
 
     chain.sleep(60 * 60 * 24 * 2)
@@ -36,7 +36,7 @@ def test_migrate(origin_vault, destination_vault, strategy, gov, loss_checker, s
     whale = accounts.at('0x99ac10631F69C753DDb595D074422a0922D9056B', force=True)
 
     pps = origin_vault.pricePerShare()
-    strategy.setFeeLossTolerance(100e18,{"from": gov})
+    # strategy.setFeeLossTolerance(100e18,{"from": gov})
     tx = strategy.harvest({"from": gov})
     chain.sleep(60*60)
     print(f"pps1: {pps}")
@@ -47,7 +47,7 @@ def test_migrate(origin_vault, destination_vault, strategy, gov, loss_checker, s
         print(f"👌 No Airdrop")
     assert old_vault.pricePerShare() >= pps
 
-    strategy.setFeeLossTolerance(100e18,{"from": gov})
+    # strategy.setFeeLossTolerance(100e18,{"from": gov})
 
     totalShares = origin_vault.totalSupply()
     tx = strategy.harvest({"from": gov})
